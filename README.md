@@ -59,3 +59,7 @@ EXTERNAL FEATURE VECTORS:
 You can use externally pre-computed feature vectors, from tool such as word2vec, GloVe etc. This can boost performance by about 5% on perplexity. More in D Soutner, L Müller; On Continuous Space Word Representations as Input of LSTM Language Model
  Statistical Language and Speech Processing, 267-274.
 
+TODO:
+
+- add hierarchical softmax on output layer for speed-up by big models
+- better document FV option
