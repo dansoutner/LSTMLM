@@ -609,22 +609,6 @@ class LSTMLM_FV(LSTMLM):
 	def FV(self, wrd, cache):
 		return self.fv[wrd]
 
-	def FV_LDA(self, wrd, cache):
-		return np.hstack([self.fv[wrd], self.lda.cache_to_fv(cache)]).astype(dtype=xp.float32)
-
-	def FV_LSI(self, wrd, cache):
-		return np.hstack([self.fv[wrd], self.lsi.cache_to_fv(cache)]).astype(dtype=xp.float32)
-
-	def FV_HDP(self, wrd, cache):
-		return np.hstack([self.fv[wrd], self.hdp.cache_to_fv(cache)]).astype(dtype=xp.float32)
-
-	def FV_CTM(self, wrd, cache):
-		return np.hstack([self.fv[wrd], self.ctm.cache_to_fv(cache)]).astype(dtype=xp.float32)
-
-	def FV_DOC2VEC(self, wrd, cache):
-		return np.hstack([self.fv[wrd], self.doc2vec.cache_to_fv(cache)]).astype(dtype=xp.float32)
-
-
 	def load_text_data(self, filename, update_vocab=False):
 		"""Loads text to ints, update vocab if text is training"""
 		words = open(filename).read().replace('\n', ' '+EOS+' ').strip().split()
@@ -712,7 +696,7 @@ class LSTMLM_FV(LSTMLM):
 			# update
 			if args.fv or args.fv1:
 				if args.fv1:
-					if args.fv_type == 0: #update only UNK words
+					if args.fv_type == 0:  # update only UNK words
 						for wrd in dataset_text:
 							if wrd not in self.fv:
 								if wrd in self.fv1model.vocab.keys():
@@ -782,7 +766,6 @@ class LSTMLM_FV(LSTMLM):
 		# set unk words
 		for wrd in train_words + valid_words:
 			if wrd not in self.fv:
-				#self.fv[wrd] = np.zeros((self.fv_len,)).astype(dtype=xp.float32)
 				self.fv[wrd] = self.fv[UNK]
 
 		dx = [[]] * len(batch_idxs)
@@ -791,22 +774,11 @@ class LSTMLM_FV(LSTMLM):
 			for j in batch_idxs:
 				idx = (jump * j + i) % whole_len
 				cache = train_words[max(0, idx-self.cache_len) : idx + 1]
-
-				#wrd = train_words[(jump * j + i) % whole_len]
-				#if j == 0:
-				#	print(cache)
-				#	print(self.make_fv(train_words[idx], cache)[-150:])
-				#print(train_words[idx])
 				dx[j] = self.make_fv(train_words[idx], cache)
 
-			#dx = [self.fv[train_words[(jump * j + i) % whole_len]] for j in batch_idxs]
-
 			x = chainer.Variable(xp.asarray(dx))
-			print(x.data.shape)
-
 			t = chainer.Variable(xp.asarray(
 				[train_data[(jump * j + i + 1) % whole_len] for j in batch_idxs]))
-			print(t.data.shape)
 
 			loss_i = self.model(x, t)
 			accum_loss += loss_i
@@ -856,7 +828,7 @@ if __name__ == "__main__":
 		(based on LSTM neural networks)
 		Implemented by Daniel Soutner,
 		New Technologies for the Information Society,
-		University of West Bohemia, Plzen, Czech rep.
+		University of West Bohemia, Plzen, Czechia
 		dsoutner@kky.zcu.cz, 2016
 		"""
 
@@ -897,21 +869,9 @@ if __name__ == "__main__":
 						help='cPickled python dictionary with feature vectors for every word in vocab')
 	parser.add_argument('--fv-type', metavar="FILE", dest="fv_type",
 						type=int, choices=[0,1,2], default=0,
-						help='')
-	parser.add_argument('--stopwords', metavar="FILE", default=None,
-						help='text file with stopwords')
-	parser.add_argument('--lda', metavar="FILE", default=None, nargs=2,
-						help='LDA model files')
-	parser.add_argument('--lsi', metavar="FILE", default=None, nargs=2,
-						help='LSI model files')
-	parser.add_argument('--ctm', metavar="FILE", default=None, nargs=2,
-						help='CTM model files')
-	parser.add_argument('--hdp', metavar="FILE", default=None, nargs=2,
-						help='HDP model files')
-	parser.add_argument('--doc2vec', metavar="FILE", default=None, nargs=2,
-						help='DOC2VEC model files, second parameter from [0,1,2,3,4] = type of model')
-	parser.add_argument('--cache-len', type=int, default=100,
-						help='Length of topic model cache')
+						help='type == 0: update only UNK words, '
+								'type == 1: # update all words in valid, '
+								'type == 2: # update all words in train+valid')
 
 	parser.add_argument('--num-layers', type=int, default=None, choices=[1,2,3],
 						help='Number of LSTM layers (1 or 2)')
