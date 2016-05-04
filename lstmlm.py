@@ -195,7 +195,11 @@ class LSTMLM:
 				print('#vocab =', len(self.vocab))
 
 		if args.ngram:
-			self.arpaLM = ArpaLM(path=args.ngram)
+			assert os.path.exists(args.ngram[0])
+			assert float(args.ngram[1])
+
+			self.arpaLM = ArpaLM.ArpaLM(path=args.ngram[0])
+			self.arpaLM_weight = float(args.ngram[1])
 
 		# Init/Resume
 		if args.initmodel:
@@ -290,12 +294,20 @@ class LSTMLM:
 		evaluator.predictor.reset_state()  # initialize state
 		evaluator.predictor.train = False  # dropout does nothing
 
+		self.ivocab = {v: k for k, v in self.vocab.items()}
+
 		sum_log_perp = 0
 		for i in six.moves.range(dataset.size - 1):
 			x = chainer.Variable(xp.asarray(dataset[i : i + 1]), volatile='on')
 			t = chainer.Variable(xp.asarray(dataset[i + 1 : i + 2]), volatile='on')
 			loss = evaluator(x, t)
-			sum_log_perp += loss.data
+			if self.arpaLM:
+				arpa_prob = self.arpaLM.getProbability([self.ivocab[x] for x in dataset[max(0, i - 10): i + 1]], self.ivocab[dataset[i + 2]])
+				loss_x = np.exp(loss.data) * (1-self.arpaLM_weight) + np.power(10, arpa_prob) * self.arpaLM_weight
+				sum_log_perp += np.log(loss_x)
+				#print(np.power(10, arpa_prob), np.exp(-loss.data))
+			else:
+				sum_log_perp += loss.data
 		return math.exp(float(sum_log_perp) / (dataset.size - 1))
 
 
@@ -811,7 +823,7 @@ if __name__ == "__main__":
 						help='Computes PPL of net on text file (if we train, do that after training)')
 	parser.add_argument('--nbest', metavar="FILE", default=None,
 						help='Computes logprobs on nbest file')
-	parser.add_argument('--ngram', metavar="FILE", default=None, nargs=2,
+	parser.add_argument('--ngram', metavar="FILE weight", default=None, nargs=2,
 						help='ARPA n-gram model with interpoalting weight as second parameter')
 
 	parser.add_argument('--fv', metavar="FILE", default=None,

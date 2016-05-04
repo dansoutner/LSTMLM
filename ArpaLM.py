@@ -130,7 +130,7 @@ class ArpaLM(object):
 		self.n = max(self.ng_counts.keys())
 		self.ngrams = []
 		for n in range(1,self.n+1):
-			vals = numpy.zeros((self.ng_counts[n],2),'d')
+			vals = numpy.zeros((self.ng_counts[n], 2),'d')
 			self.ngrams.append(vals)
 			self.ngmap.append({})
 		# Read unigrams and create word id list
@@ -144,7 +144,6 @@ class ArpaLM(object):
 			spam = fh.readline().rstrip()
 			if spam == "":
 				break
-			#print spam
 			try:
 				p,w,b = spam.split()
 			except ValueError:	#hack - if backoff not present is 0.0
@@ -319,12 +318,9 @@ class ArpaLM(object):
 				 words given, in base e (natural log).
 		@rtype: float
 		"""
-		#print syms
-		syms = syms[0:min(len(syms),self.n)]
+		syms = syms[0 : min(len(syms), self.n)]
 		# It makes the most sense to do this recursively
 		n = len(syms)
-		#print syms
-		#print n
 		if n == 1:
 			if syms[0] in self.ngmap[0]:
 				# 1-Gram exists, just return its probability
@@ -431,6 +427,6 @@ if __name__ == "__main__":
 	txt = "to make them directly comparable each index is based on the close of nineteen sixty nine equaling one hundred"
 	text = txt.split()
 
-	for w in range(1,len(text)):
+	for w in range(1, len(text)):
 		print a.getProbability(text[:w], text[w])
 
