@@ -36,7 +36,7 @@ USAGE:
 
 train LSTM LM on text and save
 ```
-python lstm.py --train train.txt dev.txt test.txt --hidden 100 --save-net example.lstm-lm
+python lstm.py --train train.txt --valid dev.txt --test test.txt --hidden 100 --num-layers 2 --save-net example.lstm-lm
 ```
 
 load net and evaluate on perplexity
@@ -44,14 +44,14 @@ load net and evaluate on perplexity
 python lstm.py --load-net example.lstm-lm --ppl valid2.txt
 ```
 
-load net, combine with ARPA LM and evaluate
+load net, combine with ARPA LM (weight 0.2) and evaluate
 ```
-python lstm.py --load-net example.lstm-lm --ppl valid2.txt --srilm-file ngram.model.arpa --lambda 0.2
+python lstm.py --load-net example.lstm-lm --ppl valid2.txt --ngram ngram.model.arpa 0.2
 ```
 
 load net and rescore nbest list
 ```
-python lstm.py --load-net example.lstm-lm --nbest-rescore nbest.list --wip 0 --lmw 11
+python lstm.py --load-net example.lstm-lm --nbest nbest.list --wip 0 --lmw 11
 ```
 
 EXTERNAL FEATURE VECTORS:
@@ -63,3 +63,4 @@ TODO:
 
 - add hierarchical softmax on output layer for speed-up by big models
 - better document FV option
+- test n-gram interpolation and nbest scoring
