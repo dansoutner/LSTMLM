@@ -178,6 +178,8 @@ class LSTMLM:
 		self.ivocab = {}
 		self.model = None
 		self.optimizer = None
+		self.arpaLM = None
+		self.arpaLM_weight = None
 
 		if args.save_net:
 			self.save_net = args.save_net
@@ -190,8 +192,8 @@ class LSTMLM:
 				valid_data = self.load_char_data(args.valid)
 				print('#vocab =', len(self.vocab))
 			else:
-				train_data = self.load_text_data(args.train, update_vocab=True)
-				valid_data = self.load_text_data(args.valid)
+				train_data, train_text = self.load_text_data(args.train, update_vocab=True)
+				valid_data, valid_text = self.load_text_data(args.valid)
 				print('#vocab =', len(self.vocab))
 
 		if args.ngram:
@@ -218,16 +220,16 @@ class LSTMLM:
 			if args.char:
 				test_data = self.load_char_data(args.test)
 			else:
-				test_data = self.load_text_data(args.test)
-			test_perp = self.evaluate(test_data)
+				test_data, test_text = self.load_text_data(args.test)
+			test_perp = self.evaluate(test_data, test_text)
 			print('test perplexity:', test_perp)
 
 		if args.ppl:
 			if args.char:
-				test_data = self.load_text_data(args.ppl)
+				test_data = self.load_char_data(args.ppl)
 			else:
-				test_data = self.load_text_data(args.ppl)
-			test_perp = self.evaluate(test_data)
+				test_data, test_text = self.load_text_data(args.ppl)
+			test_perp = self.evaluate(test_data, test_text)
 			print('test perplexity:', test_perp)
 
 		if args.nbest:
@@ -260,7 +262,6 @@ class LSTMLM:
 				if update_vocab:
 					self.vocab[word] = len(self.vocab)
 				else:
-					#print("unk word", word)
 					word = UNK
 			dataset[i] = self.vocab[word]
 		if update_vocab:
@@ -272,7 +273,7 @@ class LSTMLM:
 				except KeyError:
 					tree[idx] = 1
 			self.tree = L.BinaryHierarchicalSoftmax.create_huffman_tree(tree)
-		return dataset
+		return dataset, words
 
 
 	def load_char_data(self, filename, update_vocab=False):
@@ -287,27 +288,56 @@ class LSTMLM:
 		return dataset
 
 
-	def evaluate(self, dataset):
+	def evaluate(self, dataset, text_dataset):
 		""""Evaluate net on input dataset 
 			return perplexity"""
 		evaluator = self.model.copy()
 		evaluator.predictor.reset_state()  # initialize state
 		evaluator.predictor.train = False  # dropout does nothing
 
-		self.ivocab = {v: k for k, v in self.vocab.items()}
+		#self.ivocab = {v: k for k, v in self.vocab.items()}
+		LOG10TOLOG = np.log(10)
+		LOGTOLOG10 = 1. / LOG10TOLOG
 
 		sum_log_perp = 0
+		oov_arpa = 0
+		oov_net = 0
 		for i in six.moves.range(dataset.size - 1):
 			x = chainer.Variable(xp.asarray(dataset[i : i + 1]), volatile='on')
 			t = chainer.Variable(xp.asarray(dataset[i + 1 : i + 2]), volatile='on')
 			loss = evaluator(x, t)
 			if self.arpaLM:
-				arpa_prob = self.arpaLM.getProbability([self.ivocab[x] for x in dataset[max(0, i - 10): i + 1]], self.ivocab[dataset[i + 2]])
-				loss_x = np.exp(loss.data) * (1-self.arpaLM_weight) + np.power(10, arpa_prob) * self.arpaLM_weight
-				sum_log_perp += np.log(loss_x)
-				#print(np.power(10, arpa_prob), np.exp(-loss.data))
+				ctx = text_dataset[max(0, i - 10): i+1]
+				ctx = ctx[::-1]
+
+				# ARPA takes only the last sentence
+				if "</s>" in ctx:
+					idx = ctx.index("</s>")
+					if idx == 0:
+						try:
+							idx = ctx[1:].index("</s>")
+						except ValueError:
+							idx = len(ctx) - 1
+					ctx = ctx[:idx + 1]
+				if len(ctx) == 2 and ctx[len(ctx) - 1] == "</s>":
+					ctx.insert(1, "<s>")
+
+				i_arpa = self.arpaLM.prob(*ctx)
+				l_arpa = LOGTOLOG10 * i_arpa
+				if l_arpa > -98:
+					arpa_prob = math.exp(i_arpa)
+					net_prob = math.exp(-loss.data)
+					comb_prob = net_prob * (1. - self.arpaLM_weight) + arpa_prob * self.arpaLM_weight
+					print(arpa_prob, net_prob, comb_prob)
+					sum_log_perp -= math.log(comb_prob)
+				else:
+					net_prob = math.exp(-loss.data)
+					comb_prob = net_prob * (1. - self.arpaLM_weight)
+					sum_log_perp -= math.log(comb_prob)
+					oov_arpa += 1
 			else:
 				sum_log_perp += loss.data
+		print("OOV n-gram", oov_arpa)
 		return math.exp(float(sum_log_perp) / (dataset.size - 1))
 
 
