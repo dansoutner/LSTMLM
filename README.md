@@ -1,4 +1,4 @@
-==LSTM language model toolkit==
+# LSTM language model toolkit
 
 ====
 
@@ -7,8 +7,8 @@ used for language modelling.
 
 FEATS:
 - runs on GPU, uses minibatches
-- 2 layer architecture
-- allows use external word features (See: D Soutner, L Müller; On Continuous Space Word Representations as Input of LSTM Language Model
+- 1 to 3 layer architectures
+- allows use of external word features (See: D Soutner, L Müller; On Continuous Space Word Representations as Input of LSTM Language Model
  Statistical Language and Speech Processing, 267-274)
 
 
@@ -21,18 +21,18 @@ dsoutner@kky.zcu.cz, 2016
 
 Licensed under the 3-clause BSD.
 
-REQUIREMENTS:
+### Requirements
 
 You will need:
 - python >= 2.6
-- chainer >= 0.17 (chainer.org)
 
 Python libs:
+- chainer >= 0.17 (chainer.org)
 - numpy
 - argparse (is in python 2.7 and higher)
 - gensim (for FV extension)
 
-USAGE:
+### Usage
 
 train LSTM LM on text and save
 ```
@@ -54,12 +54,12 @@ load net and rescore nbest list
 python lstm.py --load-net example.lstm-lm --nbest nbest.list --wip 0 --lmw 11
 ```
 
-EXTERNAL FEATURE VECTORS:
+### Extranal feature vectors
 
 You can use externally pre-computed feature vectors, from tool such as word2vec, GloVe etc. This can boost performance by about 5% on perplexity. More in D Soutner, L Müller; On Continuous Space Word Representations as Input of LSTM Language Model
  Statistical Language and Speech Processing, 267-274.
 
-TODO:
+### TODO
 
 - add hierarchical softmax on output layer for speed-up by big models
 - better document FV option
