@@ -192,13 +192,13 @@ class LSTMLM:
 				valid_data = self.load_char_data(args.valid)
 				print('#vocab =', len(self.vocab))
 			else:
-				train_data, train_text = self.load_text_data(args.train, update_vocab=True)
-				valid_data, valid_text = self.load_text_data(args.valid)
+				train_data, self.train_text = self.load_text_data(args.train, update_vocab=True)
+				valid_data, self.valid_text = self.load_text_data(args.valid)
 				print('#vocab =', len(self.vocab))
 
 		if args.ngram:
 			assert os.path.exists(args.ngram[0])
-			assert float(args.ngram[1])
+			assert 1.0 >= float(args.ngram[1]) >= 0.0
 
 			self.arpaLM = ArpaLM.ArpaLM(path=args.ngram[0])
 			self.arpaLM_weight = float(args.ngram[1])
@@ -221,7 +221,7 @@ class LSTMLM:
 				test_data = self.load_char_data(args.test)
 			else:
 				test_data, test_text = self.load_text_data(args.test)
-			test_perp = self.evaluate(test_data, test_text)
+			test_perp = self.evaluate(test_data, text=test_text)
 			print('test perplexity:', test_perp)
 
 		if args.ppl:
@@ -229,7 +229,7 @@ class LSTMLM:
 				test_data = self.load_char_data(args.ppl)
 			else:
 				test_data, test_text = self.load_text_data(args.ppl)
-			test_perp = self.evaluate(test_data, test_text)
+			test_perp = self.evaluate(test_data, text=test_text)
 			print('test perplexity:', test_perp)
 
 		if args.nbest:
@@ -253,9 +253,9 @@ class LSTMLM:
 		"""Loads text to ints, update vocab if text is training"""
 		words = open(filename).read().replace('\n', ' '+EOS+' ').strip().split()
 		dataset = np.ndarray((len(words),), dtype=np.int32)
-		if not EOS in self.vocab and update_vocab:
+		if EOS not in self.vocab and update_vocab:
 			self.vocab[EOS] = len(self.vocab)
-		if not UNK in self.vocab and update_vocab:
+		if UNK not in self.vocab and update_vocab:
 			self.vocab[UNK] = len(self.vocab)
 		for i, word in enumerate(words):
 			if word not in self.vocab:
@@ -288,26 +288,30 @@ class LSTMLM:
 		return dataset
 
 
-	def evaluate(self, dataset, text_dataset):
+	def evaluate(self, dataset, text=None):
 		""""Evaluate net on input dataset 
 			return perplexity"""
 		evaluator = self.model.copy()
 		evaluator.predictor.reset_state()  # initialize state
 		evaluator.predictor.train = False  # dropout does nothing
 
-		#self.ivocab = {v: k for k, v in self.vocab.items()}
 		LOG10TOLOG = np.log(10)
 		LOGTOLOG10 = 1. / LOG10TOLOG
 
 		sum_log_perp = 0
 		oov_arpa = 0
 		oov_net = 0
+		oov_comb = 0
+
+		self.ivocab = {v: k for k, v in self.vocab.items()}
+
 		for i in six.moves.range(dataset.size - 1):
 			x = chainer.Variable(xp.asarray(dataset[i : i + 1]), volatile='on')
 			t = chainer.Variable(xp.asarray(dataset[i + 1 : i + 2]), volatile='on')
 			loss = evaluator(x, t)
-			if self.arpaLM:
-				ctx = text_dataset[max(0, i - 10): i+1]
+
+			if self.arpaLM and text:
+				ctx = text[max(0, i - 10): i+2]
 				ctx = ctx[::-1]
 
 				# ARPA takes only the last sentence
@@ -319,25 +323,45 @@ class LSTMLM:
 						except ValueError:
 							idx = len(ctx) - 1
 					ctx = ctx[:idx + 1]
+				# add <s> to every </s>
 				if len(ctx) == 2 and ctx[len(ctx) - 1] == "</s>":
 					ctx.insert(1, "<s>")
 
-				i_arpa = self.arpaLM.prob(*ctx)
-				l_arpa = LOGTOLOG10 * i_arpa
-				if l_arpa > -98:
-					arpa_prob = math.exp(i_arpa)
+				le_arpa = self.arpaLM.prob(*ctx)
+				l10_arpa = LOGTOLOG10 * le_arpa
+				# both OOV
+				if l10_arpa <= -99 and self.ivocab[dataset[i + 1]] == UNK:
+					# TODO if unk, then get net OOV prob or 0. (???)
 					net_prob = math.exp(-loss.data)
-					comb_prob = net_prob * (1. - self.arpaLM_weight) + arpa_prob * self.arpaLM_weight
-					print(arpa_prob, net_prob, comb_prob)
+					comb_prob = net_prob * (1. - self.arpaLM_weight)
 					sum_log_perp -= math.log(comb_prob)
-				else:
+					oov_comb += 1
+				# net OOV
+				elif l10_arpa > -99 and self.ivocab[dataset[i+1]] == UNK:
+					arpa_prob = math.exp(le_arpa)
+					comb_prob = arpa_prob
+					sum_log_perp -= math.log(comb_prob)
+					oov_net += 1
+				# ngram OOV
+				elif l10_arpa <= -99:
 					net_prob = math.exp(-loss.data)
 					comb_prob = net_prob * (1. - self.arpaLM_weight)
 					sum_log_perp -= math.log(comb_prob)
 					oov_arpa += 1
+				# combine
+				else:
+					arpa_prob = math.exp(le_arpa)
+					net_prob = math.exp(-loss.data)
+					comb_prob = net_prob * (1. - self.arpaLM_weight) + arpa_prob * self.arpaLM_weight
+					sum_log_perp -= math.log(comb_prob)
 			else:
 				sum_log_perp += loss.data
-		print("OOV n-gram", oov_arpa)
+
+		if self.arpaLM:
+			print("OOV both", oov_comb)
+			print("OOV n-gram", oov_arpa)
+		print("OOV net", oov_net)
+		print('logprob', sum_log_perp)
 		return math.exp(float(sum_log_perp) / (dataset.size - 1))
 
 
@@ -451,7 +475,7 @@ class LSTMLM:
 			if (i + 1) % jump == 0:
 				epoch += 1
 				now = time.time()
-				perp = self.evaluate(valid_data)
+				perp = self.evaluate(valid_data, text=self.valid_text)
 				print('epoch {} validation perplexity: {:.2f}'.format(epoch, perp))
 				cur_at += time.time() - now  # skip time of evaluation
 
