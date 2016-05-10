@@ -311,7 +311,7 @@ class LSTMLM:
 			loss = evaluator(x, t)
 
 			if self.arpaLM and text:
-				ctx = text[max(0, i - 10): i+2]
+				ctx = text[max(0, i - 10): i + 2]
 				ctx = ctx[::-1]
 
 				# ARPA takes only the last sentence
