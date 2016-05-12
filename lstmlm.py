@@ -57,7 +57,7 @@ from chainer.functions.evaluation import accuracy
 # local imports
 import net
 import ArpaLM
-import gensim2 # modified gensim package
+import gensim2      # modified gensim package
 
 # various configurations
 
@@ -180,6 +180,7 @@ class LSTMLM:
 		self.optimizer = None
 		self.arpaLM = None
 		self.arpaLM_weight = None
+		self.hs = args.hs
 
 		if args.save_net:
 			self.save_net = args.save_net
@@ -407,10 +408,12 @@ class LSTMLM:
 		else:
 			raise KeyError("Num of layers could be only from 1 to 3")
 
-		# softmax
-		self.model = L.Classifier(self.lm)
-		# or hieararchical softmax
-		#self.model = HSMmodel(len(self.vocab), config["hidden_size"], self.tree, ratio=config["keep_prob"], train=True)
+		if self.hs:
+			# or hierarchical softmax
+			self.model = net.HSMmodel(len(self.vocab), config["hidden_size"], self.tree, ratio=config["keep_prob"], train=True)
+		else:
+			# softmax
+			self.model = L.Classifier(self.lm)
 		self.model.compute_accuracy = False  # we only want the perplexity
 
 		if randomize:
@@ -897,8 +900,11 @@ if __name__ == "__main__":
 	parser.add_argument('--config', type=str, default="small", choices="tiny small medium large optimal".split(),
 						help='Basic configuration')
 
+	parser.add_argument('--hs', '-hs', action="store_true",
+						help='Use hierarchical softmax')
+
 	args = parser.parse_args()
-	
+
 	if args.gpu >= 0 and not args.cpu:
 		xp = cuda.cupy
 	else:

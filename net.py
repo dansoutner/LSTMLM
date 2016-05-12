@@ -48,7 +48,6 @@ class RNNLM_2layer(chainer.Chain):
 		h0 = self.embed(x)
 		h1 = self.l1(F.dropout(h0, ratio=self.ratio, train=self.train))
 		h2 = self.l2(F.dropout(h1, ratio=self.ratio, train=self.train))
-		#y = self.l2(F.dropout(h1, ratio=self.ratio, train=self.train))
 		y = self.l3(F.dropout(h2, ratio=self.ratio, train=self.train))
 		return y
 
@@ -127,3 +126,49 @@ class RNNLM_FV_2layer(chainer.Chain):
 		return y
 
 
+class SoftmaxCrossEntropyLoss(chainer.Chain):
+	def __init__(self, n_in, n_out):
+		super(SoftmaxCrossEntropyLoss, self).__init__(
+			W=L.Linear(n_in, n_out),
+		)
+
+	def __call__(self, x, t):
+		return F.softmax_cross_entropy(self.W(x), t)
+
+
+class HSMmodel(chainer.Chain):
+
+	def __init__(self, n_vocab, n_units, tree, ratio=1., train=True):
+		super(HSMmodel, self).__init__(
+			embed=L.EmbedID(n_vocab, n_units),
+			l1=L.LSTM(n_units, n_units),
+			l2=L.LSTM(n_units, n_units),
+			l3=L.Linear(n_units, n_units),
+			#lossfun=SoftmaxCrossEntropyLoss(n_units, n_vocab),
+			lossfun=L.BinaryHierarchicalSoftmax(n_units, tree),
+		)
+		self.train = train
+		self.ratio = 1. - ratio
+		self.y = None
+		self.loss = None
+		self.accuracy = None
+		self.compute_accuracy = True
+
+	def reset_state(self):
+		self.l1.reset_state()
+		self.l2.reset_state()
+
+	def predictor(self, x):
+		h0 = self.embed(x)
+		h1 = self.l1(F.dropout(h0, ratio=self.ratio, train=self.train))
+		h2 = self.l2(F.dropout(h1, ratio=self.ratio, train=self.train))
+		y = self.l3(F.dropout(h2, ratio=self.ratio, train=self.train))
+		return y
+
+	def __call__(self, x, t):
+		self.y = self.predictor(x)
+		self.loss = self.lossfun(self.y, t)
+		#print(self.loss.data)
+		if self.compute_accuracy:
+			self.accuracy = chainer.functions.evaluation.accuracy(self.y, t)
+		return self.loss
