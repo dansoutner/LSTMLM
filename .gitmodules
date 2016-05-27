@@ -1,0 +1,3 @@
+[submodule "gensim2"]
+	path = gensim
+	url = https://github.com/rutum/gensim
