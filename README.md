@@ -49,9 +49,9 @@ load net, combine with ARPA LM (weight 0.2) and evaluate
 python lstm.py --initmodel example.lstm-lm --ppl valid2.txt --ngram ngram.model.arpa 0.2
 ```
 
-load net and rescore nbest list
+load net and rescore nbest list (scores every line with its logprob and print to stdout)
 ```
-python lstm.py --initmodel example.lstm-lm --nbest nbest.list --wip 0 --lmw 11
+python lstm.py --initmodel example.lstm-lm --nbest nbest.list
 ```
 
 ### Extranal feature vectors
