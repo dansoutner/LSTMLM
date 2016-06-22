@@ -41,17 +41,17 @@ python lstm.py --train train.txt --valid dev.txt --test test.txt --hidden 100 --
 
 load net and evaluate on perplexity
 ```
-python lstm.py --load-net example.lstm-lm --ppl valid2.txt
+python lstm.py --initmodel example.lstm-lm --ppl valid2.txt
 ```
 
 load net, combine with ARPA LM (weight 0.2) and evaluate
 ```
-python lstm.py --load-net example.lstm-lm --ppl valid2.txt --ngram ngram.model.arpa 0.2
+python lstm.py --initmodel example.lstm-lm --ppl valid2.txt --ngram ngram.model.arpa 0.2
 ```
 
 load net and rescore nbest list
 ```
-python lstm.py --load-net example.lstm-lm --nbest nbest.list --wip 0 --lmw 11
+python lstm.py --initmodel example.lstm-lm --nbest nbest.list --wip 0 --lmw 11
 ```
 
 ### Extranal feature vectors
