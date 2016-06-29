@@ -293,8 +293,12 @@ class LSTMLM:
 		""""Evaluate net on input dataset 
 			return perplexity"""
 		evaluator = self.model.copy()
-		evaluator.predictor.reset_state()  # initialize state
-		evaluator.predictor.train = False  # dropout does nothing
+		if self.hs:
+			evaluator.reset_state()
+			evaluator.train = False
+		else:
+			evaluator.predictor.reset_state()  # initialize state
+			evaluator.predictor.train = False  # dropout does nothing
 
 		LOG10TOLOG = np.log(10)
 		LOGTOLOG10 = 1. / LOG10TOLOG
@@ -468,7 +472,10 @@ class LSTMLM:
 			if (i + 1) % PRINT_POINT == 0:
 				now = time.time()
 				throuput = PRINT_POINT * self.config["batch_size"] / (now - cur_at)
-				perp = math.exp(float(cur_log_perp) / PRINT_POINT)
+				if self.hs:
+					perp = float(cur_log_perp) / PRINT_POINT
+				else:
+					perp = math.exp(float(cur_log_perp) / PRINT_POINT)
 				#perp = float(cur_log_perp) / PRINT_POINT
 				print('iter {:.1f} training perplexity: {:.2f} ({:.2f} words/sec)'.format((i + 1) / jump, perp, throuput))
 				cur_at = now
