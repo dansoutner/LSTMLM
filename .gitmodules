@@ -1,3 +1,6 @@
-[submodule "gensim2"]
-	path = gensim2
+[submodule "gensim"]
+	path = gensim
 	url = https://github.com/rutum/gensim/tree/rm_online
+[submodule "gensim_rm_online"]
+	path = gensim_rm_online
+	url = https://github.com/rutum/gensim.git
