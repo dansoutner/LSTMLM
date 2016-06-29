@@ -877,6 +877,7 @@ if __name__ == "__main__":
 	parser.add_argument('--random-seed', default=None, type=int, dest="random_seed",
 						help='Set random seed')
 
+
 	parser.add_argument('--train', default=None, metavar="FILE",
 						help='Train text file')
 	parser.add_argument('--valid', default=None, metavar="FILE",
