@@ -57,7 +57,13 @@ from chainer.functions.evaluation import accuracy
 # local imports
 import net
 import ArpaLM
-import gensim2      # modified gensim package
+
+try:
+	import gensim_rm_online
+except ImportError:
+	raise ImportError("For word2vec online methods you need modified"
+	                  " gensim package. Please, install rm_online branch from "
+	                  "https://github.com/rutum/gensim/tree/c93b63ecdd47fc29377afdf4a4b7a0bf42256b71")
 
 # various configurations
 

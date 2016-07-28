@@ -30,7 +30,10 @@ Python libs:
 - chainer >= 0.17 (chainer.org)
 - numpy
 - argparse (is in python 2.7 and higher)
-- gensim (for FV extension) or gensim with online word2vec update function (https://github.com/rutum/gensim/tree/rm_online)
+- gensim (for FV extension) or gensim with online word2vec update function (rm_online branch from https://github.com/rutum/gensim/tree/rm_online)
+
+Note: For word2vec online methods you need modified gensim package. Please, install rm_online branch from https://github.com/rutum/gensim/tree/c93b63ecdd47fc29377afdf4a4b7a0bf42256b71
+
 
 ### Usage
 
