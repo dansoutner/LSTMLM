@@ -35,12 +35,8 @@ Python libs:
 ## How to install gensim2/gensim_rm_online
 For word2vec online methods you need modified gensim package. If you will not need this functionality, simply comment out the line with import in lstmlm.py. Here is how to get it:
 
-1. Clone this repo including rm_online branch of gensim
-```
-git clone --recursive https://github.com/dansoutner/LSTMLM.git
-```
-2. Add empty __init__.py file to gensim_rm_online subdir to allow python to import from there easily.
-
+1. Clone this repo including rm_online branch of gensim ```git clone --recursive https://github.com/dansoutner/LSTMLM.git```
+2. Add empty ```__init__.py``` file to gensim_rm_online subdir to allow python to import from there easily.
 
 ### Usage
 
