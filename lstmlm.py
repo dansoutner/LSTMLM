@@ -59,7 +59,7 @@ import net
 import ArpaLM
 
 try:
-	import gensim_rm_online
+	from gensim_rm_online import gensim as gensim2
 except ImportError:
 	raise ImportError("For word2vec online methods you need modified"
 	                  " gensim package. Please, install rm_online branch from "
